@@ -1,0 +1,231 @@
+package com.mobile.yan.contextawareness;
+
+import android.Manifest;
+import android.app.PendingIntent;
+import android.app.ProgressDialog;
+import android.app.VoiceInteractor;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
+import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.android.gms.awareness.Awareness;
+import com.google.android.gms.awareness.fence.AwarenessFence;
+import com.google.android.gms.awareness.fence.DetectedActivityFence;
+import com.google.android.gms.awareness.fence.FenceState;
+import com.google.android.gms.awareness.fence.FenceUpdateRequest;
+import com.google.android.gms.awareness.fence.LocationFence;
+import com.google.android.gms.awareness.snapshot.BeaconStateResult;
+import com.google.android.gms.awareness.snapshot.DetectedActivityResult;
+import com.google.android.gms.awareness.snapshot.HeadphoneStateResult;
+import com.google.android.gms.awareness.snapshot.LocationResult;
+import com.google.android.gms.awareness.snapshot.PlacesResult;
+import com.google.android.gms.awareness.snapshot.WeatherResult;
+import com.google.android.gms.awareness.state.BeaconState;
+import com.google.android.gms.awareness.state.HeadphoneState;
+import com.google.android.gms.awareness.state.Weather;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.location.ActivityRecognitionResult;
+import com.google.android.gms.location.DetectedActivity;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlaceLikelihood;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener {
+
+    private GoogleApiClient mGoogleApiClient;
+    private final static int REQUEST_PERMISSION_RESULT_CODE = 42;
+    private double  lat;
+    private double  lng;
+
+    private RecyclerView recyclerView;
+    private RecyclerView.Adapter adapter;
+    private List<ListItem> listItems;
+
+    private String URL = "https://partner-api.groupon.com/deals.json?tsToken=US_AFF_0_201236_212556_0"
+            + "&lat=" + lat
+            + "&lng=" + lng
+            + "&offset=0&limit=50";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        //Setting up awareness api
+        checkLocationPermission();
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(Awareness.API)
+                .enableAutoManage(this, this)
+                .build();
+        mGoogleApiClient.connect();
+
+        detectLocation();
+
+        //Setting up recyclerView
+        recyclerView = (RecyclerView) findViewById( R.id.recyclerView );
+        recyclerView.setHasFixedSize( true );
+        recyclerView.setLayoutManager( new LinearLayoutManager( this ) );
+        listItems = new ArrayList<>( );
+        loadRecyclerViewData ();
+
+    }
+
+    private void loadRecyclerViewData (){
+        final ProgressDialog progressDialog = new ProgressDialog( this );
+        progressDialog.setMessage( "Loading data..." );
+        progressDialog.show();
+
+        StringRequest stringRequest = new StringRequest( Request.Method.GET,
+                URL,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        progressDialog.dismiss();
+                        try {
+                            JSONObject jsonObject = new JSONObject( response );
+                            JSONArray array = jsonObject.getJSONArray( "deals" );
+
+                            for(int i = 0; i<array.length(); i++){
+                                JSONObject object = array.getJSONObject( i );
+
+
+                                ListItem item = new ListItem(
+                                        object.getString( "announcementTitle" ),
+                                        object.getString( "title" ),
+                                        object.getString( "largeImageUrl" ),
+
+                                        object.getString( "dealUrl" ),
+                                        object.getString( "shortAnnouncementTitle" ),
+                                        object.getString( "smallImageUrl" ),
+                                        object.getString( "mediumImageUrl" ),
+                                        object.getString( "finePrint" ),
+                                        object.getString( "highlightsHtml" ),
+                                        object.getString( "pitchHtml" ),
+
+                                        object.getJSONArray("options")
+                                                .getJSONObject(  0 )
+                                                .getJSONObject( "value" ).getString( "formattedAmount" ),
+
+                                        object.getJSONArray("options")
+                                                .getJSONObject( 0 )
+                                                .getJSONObject( "price" ).getString( "formattedAmount" )
+
+                                );
+                                listItems.add(item);
+                                Log.d( "jsonObject", item.getInitialPrice() );
+                                Log.d( "jsonObject", item.getDiscountPrice() );
+
+                            }
+                            adapter = new RecyclerViewAdapter(listItems, getApplicationContext());
+                            recyclerView.setAdapter( adapter );
+                        } catch (JSONException e){
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    public void onErrorResponse(VolleyError volleyError){
+                        progressDialog.dismiss();
+                        Toast.makeText( getApplicationContext(), volleyError.getMessage(), Toast.LENGTH_LONG ).show();
+                    }
+                });
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(stringRequest);
+    }
+
+    //Detect current location
+    private void detectLocation() {
+        if( !checkLocationPermission() ) {
+            return;
+        }
+
+        Awareness.SnapshotApi.getLocation(mGoogleApiClient)
+                .setResultCallback(new ResultCallback<LocationResult>() {
+                    @Override
+                    public void onResult(@NonNull LocationResult locationResult) {
+                        Location location = locationResult.getLocation();
+                        lat = location.getLatitude();
+                        lng = location.getLongitude();
+                        Log.d( "Location", location.toString() );
+                    }
+                });
+    }
+
+
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+    }
+    private boolean checkLocationPermission() {
+        if( !hasLocationPermission() ) {
+            Log.e("Awareness+", "Does not have location permission granted");
+            requestLocationPermission();
+            return false;
+        }
+
+        return true;
+    }
+    private void requestLocationPermission() {
+        ActivityCompat.requestPermissions(
+                MainActivity.this,
+                new String[]{ Manifest.permission.ACCESS_FINE_LOCATION },
+                REQUEST_PERMISSION_RESULT_CODE );
+    }
+
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission( this, Manifest.permission.ACCESS_FINE_LOCATION )
+                == PackageManager.PERMISSION_GRANTED;
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_PERMISSION_RESULT_CODE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //granted
+                } else {
+                    Log.e("Awareness+", "Location permission denied.");
+                }
+            }
+        }
+    }
+}
