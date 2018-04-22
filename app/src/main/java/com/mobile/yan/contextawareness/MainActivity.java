@@ -9,21 +9,31 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
+//import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -65,7 +75,9 @@ import java.util.Arrays;
 import java.util.List;
 
 
-public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener {
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener
+        //,SearchView.OnQueryTextListener
+{
 
     private GoogleApiClient mGoogleApiClient;
     private final static int REQUEST_PERMISSION_RESULT_CODE = 42;
@@ -74,7 +86,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
     private RecyclerView recyclerView;
     private RecyclerView.Adapter adapter;
-    private List<ListItem> listItems;
+    private ArrayList<ListItem> listItems;
+    private SearchView searchView;
 
     private String URL = "https://partner-api.groupon.com/deals.json?tsToken=US_AFF_0_201236_212556_0"
             + "&lat=" + lat
@@ -140,7 +153,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                                         object.getJSONArray("options")
                                                 .getJSONObject(  0 )
                                                 .getJSONObject( "value" ).getString( "formattedAmount" ),
-
                                         object.getJSONArray("options")
                                                 .getJSONObject( 0 )
                                                 .getJSONObject( "price" ).getString( "formattedAmount" )
@@ -149,7 +161,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                                 listItems.add(item);
                                 Log.d( "jsonObject", item.getInitialPrice() );
                                 Log.d( "jsonObject", item.getDiscountPrice() );
-
                             }
                             adapter = new RecyclerViewAdapter(listItems, getApplicationContext());
                             recyclerView.setAdapter( adapter );
@@ -173,7 +184,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         if( !checkLocationPermission() ) {
             return;
         }
-
         Awareness.SnapshotApi.getLocation(mGoogleApiClient)
                 .setResultCallback(new ResultCallback<LocationResult>() {
                     @Override
@@ -186,11 +196,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 });
     }
 
-
-
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
     }
     private boolean checkLocationPermission() {
         if( !hasLocationPermission() ) {
@@ -198,7 +205,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             requestLocationPermission();
             return false;
         }
-
         return true;
     }
     private void requestLocationPermission() {
@@ -207,7 +213,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 new String[]{ Manifest.permission.ACCESS_FINE_LOCATION },
                 REQUEST_PERMISSION_RESULT_CODE );
     }
-
 
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission( this, Manifest.permission.ACCESS_FINE_LOCATION )
@@ -228,4 +233,70 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             }
         }
     }
+
+    //Create search option
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate( R.menu.menu_items, menu );
+
+        final MenuItem menuItem = menu.findItem( R.id.search_button );
+        searchView = (SearchView) menuItem.getActionView();
+        changeSearchViewTextColor( searchView );
+        ((EditText) searchView.findViewById(R.id.search_src_text))
+                .setHintTextColor( getResources().getColor( R.color.white ) );
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                newText = newText.toLowerCase();
+                ArrayList<ListItem> newList = new ArrayList<>();
+                for (ListItem item :  listItems){
+                    String name = item.getHead().toLowerCase();
+                    String price = item.getDiscountPrice().toLowerCase();
+                    if (name.contains( newText )|| price.contains( newText ))
+                        newList.add(item);
+                }
+                ((RecyclerViewAdapter)adapter).setAdapterFilter(newList);
+                return true;
+            }
+            });
+          return true;
+    }
+
+    private void changeSearchViewTextColor (View view){
+        if (view != null){
+            if (view instanceof TextView){
+                ((TextView) view).setTextColor( Color.WHITE  );
+                return;
+            }else if (view instanceof ViewGroup){
+                ViewGroup viewGroup = (ViewGroup) view;
+                for (int i = 0; i < viewGroup.getChildCount(); i++ ){
+                    changeSearchViewTextColor( viewGroup.getChildAt( i ) );
+                }
+            }
+        }
+    }
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

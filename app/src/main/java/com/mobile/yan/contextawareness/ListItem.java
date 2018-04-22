@@ -9,16 +9,16 @@ public class ListItem {
     private String imageUrl;
 
     //More information
-    public String dealUrl;
-    public String shortAnnouncementTitle;
-    public String smallImageUrl;
-    public String mediumImageUrl;
-    public String finePrint;
-    public String highlightsHtml;
-    public String pitchHtml;
+    private String dealUrl;
+    private String shortAnnouncementTitle;
+    private String smallImageUrl;
+    private String mediumImageUrl;
+    private String finePrint;
+    private String highlightsHtml;
+    private String pitchHtml;
 
-    public String initialPrice;
-    public String discountPrice;
+    private String initialPrice;
+    private String discountPrice;
 
     public ListItem(String head,
                     String desc,

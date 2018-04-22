@@ -21,6 +21,8 @@
             </intent-filter>
         </activity>
 
+        <!-- Facebook declaration -->
+        <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
         <meta-data
             android:name="com.google.android.awareness.API_KEY"
             android:value="@string/google_play_services_key" />
@@ -37,6 +39,9 @@
 
         <activity android:name=".AwarnessActivity" />
         <activity android:name=".DetailActivity"></activity>
+        <provider android:authorities="com.facebook.app.FacebookContentProvider232817460603144"
+            android:name="com.facebook.FacebookContentProvider"
+            android:exported="true" />
     </application>
 
 </manifest>

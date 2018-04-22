@@ -13,14 +13,15 @@ import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>{
 
-    private List<ListItem> listItems;
+    private ArrayList<ListItem> listItems;
     private Context context;
 
-    public RecyclerViewAdapter(List<ListItem> listItems, Context context) {
+    public RecyclerViewAdapter(ArrayList<ListItem> listItems, Context context) {
         this.listItems = listItems;
         this.context = context;
     }
@@ -33,11 +34,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
         public ViewHolder(View itemView) {
             super( itemView );
-
             textViewHead = (TextView) itemView.findViewById( R.id.textViewHead );
-
             textViewDesc = (TextView) itemView.findViewById( R.id.textViewPrice );
-
             imageView = (ImageView) itemView.findViewById( R.id.imageView );
             linearLayout = (LinearLayout) itemView.findViewById( R.id.linearDealList );
         }
@@ -57,14 +55,20 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 i.putExtra( "detail_name", listItems.get( viewHolder.getAdapterPosition() ).getHead());
                 i.putExtra( "detail_desc", listItems.get( viewHolder.getAdapterPosition() ).getDesc());
                 i.putExtra( "detail_image", listItems.get( viewHolder.getAdapterPosition() ).getImageUrl());
+                i.putExtra( "detail_dealUrl", listItems.get( viewHolder.getAdapterPosition() ).getDealUrl());
+                i.putExtra( "detail_shortAnnouncementTitle", listItems.get( viewHolder.getAdapterPosition() ).getShortAnnouncementTitle());
+                i.putExtra( "detail_smallImageUrl", listItems.get( viewHolder.getAdapterPosition() ).getSmallImageUrl());
+                i.putExtra( "detail_mediumImageUrl", listItems.get( viewHolder.getAdapterPosition() ).getMediumImageUrl());
+                i.putExtra( "detail_finePrint", listItems.get( viewHolder.getAdapterPosition() ).getFinePrint());
+                i.putExtra( "detail_highlightHtml", listItems.get( viewHolder.getAdapterPosition() ).getHighlightsHtml());
+                i.putExtra( "detail_pitchHtml", listItems.get( viewHolder.getAdapterPosition() ).getPitchHtml());
+                i.putExtra( "detail_initialPrice", listItems.get( viewHolder.getAdapterPosition() ).getInitialPrice());
+                i.putExtra( "detail_discountPrice", listItems.get( viewHolder.getAdapterPosition() ).getDiscountPrice());
 
                 i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
                 context.startActivity( i );
-
             }
         } );
-
 
         return viewHolder;
     }
@@ -77,15 +81,19 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             .into(holder.imageView);
         holder.textViewHead.setText( listItem.getHead() );
         holder.textViewDesc.setText( listItem.getDiscountPrice() );
-
-
     }
 
     @Override
     public int getItemCount() {
-
-
         return listItems.size();
+    }
+
+    //Enable search
+    public void setAdapterFilter (ArrayList<ListItem> newList){
+        listItems = new ArrayList<>();
+        listItems.addAll( newList );
+        notifyDataSetChanged();
+
     }
 
 }

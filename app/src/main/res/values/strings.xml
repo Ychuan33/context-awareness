@@ -1,6 +1,12 @@
 <resources>
-    <string name="app_name">contextAwareness</string>
+    <string name="app_name">ContextAwareness</string>
+
+    <!--Google api key-->
     <string name="google_play_services_key">AIzaSyB-jrp7HsrZSMpK0YUhi95459skijVaKk4</string>
+
+    <!--Facebook app id-->
+    <string name="facebook_app_id">232817460603144</string>
+    <string name="facebook_login_protocol_scheme">fb232817460603144</string>
 
     <string name="item_snapshot_headphones">Snapshot: Headphone State</string>
     <string name="item_snapshot_location">Snapshot: Location</string>
