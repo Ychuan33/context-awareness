@@ -7,7 +7,6 @@ public class ListItem {
     private String desc;
     //largeImageUrl
     private String imageUrl;
-
     //More information
     private String dealUrl;
     private String shortAnnouncementTitle;
@@ -20,6 +19,8 @@ public class ListItem {
     private String initialPrice;
     private String discountPrice;
 
+    private String channels;
+
     public ListItem(String head,
                     String desc,
                     String imageUrl,
@@ -31,7 +32,8 @@ public class ListItem {
                     String highlightsHtml,
                     String pitchHtml,
                     String initialPrice,
-                    String discountPrice){
+                    String discountPrice,
+                    String channels){
         this.head = head;
         this.desc = desc;
         this.imageUrl = imageUrl;
@@ -44,6 +46,7 @@ public class ListItem {
         this.pitchHtml = pitchHtml;
         this.initialPrice = initialPrice;
         this.discountPrice = discountPrice;
+        this.channels = channels;
     }
 
     public String getHead(){
@@ -94,6 +97,6 @@ public class ListItem {
         return discountPrice;
     }
 
-
+    public String getChannels() { return channels; }
 
 }

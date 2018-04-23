@@ -47,9 +47,6 @@ public class DealHelper extends SQLiteOpenHelper {
        // contentValues contentValues = new ContentValues(  );
 
 
-
-
-
     }
 
     public Cursor getInformation(SQLiteDatabase db){

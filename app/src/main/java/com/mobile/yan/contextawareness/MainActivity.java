@@ -70,13 +70,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener
-        //,SearchView.OnQueryTextListener
 {
 
     private GoogleApiClient mGoogleApiClient;
@@ -88,18 +88,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private RecyclerView.Adapter adapter;
     private ArrayList<ListItem> listItems;
     private SearchView searchView;
-
-    private String URL = "https://partner-api.groupon.com/deals.json?tsToken=US_AFF_0_201236_212556_0"
-            + "&lat=" + lat
-            + "&lng=" + lng
-            + "&offset=0&limit=50";
+    private String URL;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Setting up awareness api
+        // Set up awareness api
         checkLocationPermission();
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(Awareness.API)
@@ -107,15 +103,20 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 .build();
         mGoogleApiClient.connect();
 
-        detectLocation();
+        // Detect current location generate latitude and longitude
+        // Give latitude and longitude value to URL
+        setUrlLocation();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
 
         //Setting up recyclerView
         recyclerView = (RecyclerView) findViewById( R.id.recyclerView );
         recyclerView.setHasFixedSize( true );
         recyclerView.setLayoutManager( new LinearLayoutManager( this ) );
         listItems = new ArrayList<>( );
-        loadRecyclerViewData ();
-
     }
 
     private void loadRecyclerViewData (){
@@ -136,7 +137,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                             for(int i = 0; i<array.length(); i++){
                                 JSONObject object = array.getJSONObject( i );
 
-
                                 ListItem item = new ListItem(
                                         object.getString( "announcementTitle" ),
                                         object.getString( "title" ),
@@ -152,15 +152,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
                                         object.getJSONArray("options")
                                                 .getJSONObject(  0 )
-                                                .getJSONObject( "value" ).getString( "formattedAmount" ),
+                                                .getJSONObject( "value" )
+                                                .getString( "formattedAmount" ),
                                         object.getJSONArray("options")
                                                 .getJSONObject( 0 )
-                                                .getJSONObject( "price" ).getString( "formattedAmount" )
-
+                                                .getJSONObject( "price" )
+                                                .getString( "formattedAmount" ),
+                                        defChannel(object)
                                 );
                                 listItems.add(item);
-                                Log.d( "jsonObject", item.getInitialPrice() );
-                                Log.d( "jsonObject", item.getDiscountPrice() );
+                                Log.d( "JSONfile", item.getChannels() );
                             }
                             adapter = new RecyclerViewAdapter(listItems, getApplicationContext());
                             recyclerView.setAdapter( adapter );
@@ -179,19 +180,44 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         requestQueue.add(stringRequest);
     }
 
+    //Handle null value in channels
+
+    private String defChannel(JSONObject object) throws JSONException {
+
+        if (object.getJSONArray( "channels" ).isNull( 0 )){
+            return "No chaneels is avialable";
+        } else {
+            return object.getJSONArray( "channels" )
+                    .getJSONObject( 0 )
+                    .getString( "id" );
+        }
+    }
+
     //Detect current location
-    private void detectLocation() {
+
+    private void setUrlLocation() {
         if( !checkLocationPermission() ) {
             return;
         }
+
         Awareness.SnapshotApi.getLocation(mGoogleApiClient)
-                .setResultCallback(new ResultCallback<LocationResult>() {
+                .setResultCallback(new ResultCallback<LocationResult>()
+                {
                     @Override
                     public void onResult(@NonNull LocationResult locationResult) {
                         Location location = locationResult.getLocation();
                         lat = location.getLatitude();
                         lng = location.getLongitude();
                         Log.d( "Location", location.toString() );
+                        Log.d("lat", "value"+lat);
+
+                        //Set up initial URL
+                        URL = "https://partner-api.groupon.com/deals.json?tsToken=US_AFF_0_201236_212556_0"
+                                + "&lat=" + lat
+                                + "&lng=" + lng
+                                + "&offset=0&limit=50";
+
+                        loadRecyclerViewData();
                     }
                 });
     }
@@ -199,14 +225,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
     }
+
     private boolean checkLocationPermission() {
         if( !hasLocationPermission() ) {
-            Log.e("Awareness+", "Does not have location permission granted");
+            Log.e("ContextAwareness+", "Does not have location permission granted");
             requestLocationPermission();
             return false;
         }
+
         return true;
     }
+
     private void requestLocationPermission() {
         ActivityCompat.requestPermissions(
                 MainActivity.this,
@@ -228,7 +257,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     //granted
                 } else {
-                    Log.e("Awareness+", "Location permission denied.");
+                    Log.e("ContextAwareness+", "Location permission denied.");
                 }
             }
         }
@@ -280,6 +309,28 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 }
             }
         }
+    }
+
+    //Customize Api
+
+    public void setURLChannel(String channel) {
+        try {
+            channel = URLEncoder.encode(channel, "UTF-8");
+        } catch (Exception e) {
+            channel = channel;
+        }
+        URL += "&channel_id=" + channel;
+        Log.v("uRL", URL);
+    }
+
+    public void setURLCategories(String categories) {
+        try {
+            categories = URLEncoder.encode(categories, "UTF-8");
+        } catch (Exception e) {
+            categories = categories;
+        }
+        URL += "&filters=category:" + categories;
+        Log.v("uRL", URL);
     }
 
 }

@@ -64,6 +64,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 i.putExtra( "detail_pitchHtml", listItems.get( viewHolder.getAdapterPosition() ).getPitchHtml());
                 i.putExtra( "detail_initialPrice", listItems.get( viewHolder.getAdapterPosition() ).getInitialPrice());
                 i.putExtra( "detail_discountPrice", listItems.get( viewHolder.getAdapterPosition() ).getDiscountPrice());
+                i.putExtra( "detail_channels", listItems.get(viewHolder.getAdapterPosition()).getChannels() );
 
                 i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity( i );
@@ -93,7 +94,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         listItems = new ArrayList<>();
         listItems.addAll( newList );
         notifyDataSetChanged();
-
     }
 
 }
