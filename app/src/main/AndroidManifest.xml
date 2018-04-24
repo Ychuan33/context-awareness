@@ -37,7 +37,6 @@
             android:name="com.google.android.nearby.messages.API_KEY"
             android:value="@string/google_play_services_key" />
 
-        <activity android:name=".AwarnessActivity" />
         <activity android:name=".DetailActivity"></activity>
         <provider android:authorities="com.facebook.app.FacebookContentProvider232817460603144"
             android:name="com.facebook.FacebookContentProvider"

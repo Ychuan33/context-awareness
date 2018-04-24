@@ -32,7 +32,6 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
-//import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -83,12 +82,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private final static int REQUEST_PERMISSION_RESULT_CODE = 42;
     private double  lat;
     private double  lng;
+    private final static String ACTION_FENCE = "action_fence";
+    private final static String KEY_SITTING_AT_HOME = "sitting_at_home";
+    private MainActivity.FenceBroadcastReceiver mFenceBroadcastReceiver;
+
 
     private RecyclerView recyclerView;
     private RecyclerView.Adapter adapter;
     private ArrayList<ListItem> listItems;
     private SearchView searchView;
     private String URL;
+
+    private Button btn_recommend;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,6 +111,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         // Detect current location generate latitude and longitude
         // Give latitude and longitude value to URL
         setUrlLocation();
+
+        btn_recommend = (Button) findViewById(R.id.recommendation_button);
+        btn_recommend.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+            }
+        });
     }
 
     @Override
@@ -119,13 +131,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         listItems = new ArrayList<>( );
     }
 
-    private void loadRecyclerViewData (){
+    private void loadRecyclerViewData (String url){
         final ProgressDialog progressDialog = new ProgressDialog( this );
         progressDialog.setMessage( "Loading data..." );
         progressDialog.show();
 
         StringRequest stringRequest = new StringRequest( Request.Method.GET,
-                URL,
+                url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
@@ -208,22 +220,95 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         Location location = locationResult.getLocation();
                         lat = location.getLatitude();
                         lng = location.getLongitude();
-                        Log.d( "Location", location.toString() );
                         Log.d("lat", "value"+lat);
 
                         //Set up initial URL
                         URL = "https://partner-api.groupon.com/deals.json?tsToken=US_AFF_0_201236_212556_0"
                                 + "&lat=" + lat
                                 + "&lng=" + lng
-                                + "&offset=0&limit=50";
+                                + "&offset=0&limit=200";
 
-                        loadRecyclerViewData();
+                        loadRecyclerViewData(URL);
                     }
                 });
     }
 
+    //Detect user's current activity
+
+    private void detectActivity() {
+        Awareness.SnapshotApi.getDetectedActivity(mGoogleApiClient)
+                .setResultCallback(new ResultCallback<DetectedActivityResult>() {
+                    @Override
+                    public void onResult(@NonNull DetectedActivityResult detectedActivityResult) {
+                        ActivityRecognitionResult result = detectedActivityResult.getActivityRecognitionResult();
+                        Log.e("ContextAwareness+", "time: " + result.getTime());
+                        Log.e("ContextAwareness+", "elapsed time: " + result.getElapsedRealtimeMillis());
+                        Log.e("ContextAwareness+", "Most likely activity: " + result.getMostProbableActivity().toString());
+
+                        for( DetectedActivity activity : result.getProbableActivities() ) {
+                            Log.e("ContextAwareness+", "Activity: " + activity.getType() + " Liklihood: " + activity.getConfidence() );
+                        }
+                    }
+                });
+    }
+
+    private void createFence() {
+        checkLocationPermission();
+
+        AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.STILL);
+        AwarenessFence homeFence = LocationFence.in(43.769828, -79.413470, 100000, 1000 );
+
+        AwarenessFence sittingAtHomeFence = AwarenessFence.and(homeFence, activityFence);
+
+        Intent intent = new Intent(ACTION_FENCE);
+        PendingIntent fencePendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+
+        mFenceBroadcastReceiver = new MainActivity.FenceBroadcastReceiver();
+        registerReceiver(mFenceBroadcastReceiver, new IntentFilter(ACTION_FENCE));
+
+        FenceUpdateRequest.Builder builder = new FenceUpdateRequest.Builder();
+        builder.addFence(KEY_SITTING_AT_HOME, sittingAtHomeFence, fencePendingIntent);
+
+        Awareness.FenceApi.updateFences( mGoogleApiClient, builder.build() );
+    }
+
+
+    public class FenceBroadcastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(TextUtils.equals(ACTION_FENCE, intent.getAction())) {
+                FenceState fenceState = FenceState.extract(intent);
+
+                if( TextUtils.equals(KEY_SITTING_AT_HOME, fenceState.getFenceKey() ) ) {
+                    if( fenceState.getCurrentState() == FenceState.TRUE ) {
+                        Log.e("ContextAwareness+", "You've been sitting at home for too long");
+                    }
+                }
+            }
+        }
+    }
+
+
+    @Override
+    protected void onPause() {
+        Awareness.FenceApi.updateFences(
+                mGoogleApiClient,
+                new FenceUpdateRequest.Builder()
+                        .removeFence(KEY_SITTING_AT_HOME)
+                        .build());
+
+        if (mFenceBroadcastReceiver != null) {
+            unregisterReceiver(mFenceBroadcastReceiver);
+        }
+
+        super.onPause();
+    }
+
+
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Toast.makeText(getApplicationContext(),"Google Awareness API connection failed",Toast.LENGTH_LONG).show();
     }
 
     private boolean checkLocationPermission() {
@@ -232,7 +317,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             requestLocationPermission();
             return false;
         }
-
         return true;
     }
 
