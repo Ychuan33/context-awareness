@@ -86,7 +86,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private final static String KEY_SITTING_AT_HOME = "sitting_at_home";
     private MainActivity.FenceBroadcastReceiver mFenceBroadcastReceiver;
 
-
     private RecyclerView recyclerView;
     private RecyclerView.Adapter adapter;
     private ArrayList<ListItem> listItems;
@@ -94,6 +93,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private String URL;
 
     private Button btn_recommend;
+    int clickCount=0;
+    int fenceCount=0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,20 +116,24 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         btn_recommend = (Button) findViewById(R.id.recommendation_button);
         btn_recommend.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-
+                clickCount=clickCount+1;
+                refreshDeals();
             }
         });
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
 
         //Setting up recyclerView
         recyclerView = (RecyclerView) findViewById( R.id.recyclerView );
         recyclerView.setHasFixedSize( true );
         recyclerView.setLayoutManager( new LinearLayoutManager( this ) );
         listItems = new ArrayList<>( );
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        createFence();
+        Log.d( "Onstart", "Onstart is working!");
     }
 
     private void loadRecyclerViewData (String url){
@@ -173,7 +178,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                                         defChannel(object)
                                 );
                                 listItems.add(item);
-                                Log.d( "JSONfile", item.getChannels() );
                             }
                             adapter = new RecyclerViewAdapter(listItems, getApplicationContext());
                             recyclerView.setAdapter( adapter );
@@ -191,6 +195,69 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         RequestQueue requestQueue = Volley.newRequestQueue(this);
         requestQueue.add(stringRequest);
     }
+
+    //Reset recyclerView
+    private void reSetRecyclerViewData (String url){
+        final ProgressDialog progressDialog = new ProgressDialog( this );
+        progressDialog.setMessage( "Loading data..." );
+        progressDialog.show();
+        final ArrayList<ListItem> reSetList = new ArrayList<>();
+
+        StringRequest stringRequest = new StringRequest( Request.Method.GET,
+                url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        progressDialog.dismiss();
+                        try {
+                            JSONObject jsonObject = new JSONObject( response );
+                            JSONArray array = jsonObject.getJSONArray( "deals" );
+
+                            for(int i = 0; i<array.length(); i++){
+                                JSONObject object = array.getJSONObject( i );
+
+                                ListItem item = new ListItem(
+                                        object.getString( "announcementTitle" ),
+                                        object.getString( "title" ),
+                                        object.getString( "largeImageUrl" ),
+
+                                        object.getString( "dealUrl" ),
+                                        object.getString( "shortAnnouncementTitle" ),
+                                        object.getString( "smallImageUrl" ),
+                                        object.getString( "mediumImageUrl" ),
+                                        object.getString( "finePrint" ),
+                                        object.getString( "highlightsHtml" ),
+                                        object.getString( "pitchHtml" ),
+
+                                        object.getJSONArray("options")
+                                                .getJSONObject(  0 )
+                                                .getJSONObject( "value" )
+                                                .getString( "formattedAmount" ),
+                                        object.getJSONArray("options")
+                                                .getJSONObject( 0 )
+                                                .getJSONObject( "price" )
+                                                .getString( "formattedAmount" ),
+                                        defChannel(object)
+                                );
+                                reSetList.add(item);
+                            }
+                            ((RecyclerViewAdapter)adapter).setAdapterFilter(reSetList);
+                        } catch (JSONException e){
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    public void onErrorResponse(VolleyError volleyError){
+                        progressDialog.dismiss();
+                        Toast.makeText( getApplicationContext(), volleyError.getMessage(), Toast.LENGTH_LONG ).show();
+                    }
+                });
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+        requestQueue.add(stringRequest);
+    }
+
+
 
     //Handle null value in channels
 
@@ -211,7 +278,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         if( !checkLocationPermission() ) {
             return;
         }
-
         Awareness.SnapshotApi.getLocation(mGoogleApiClient)
                 .setResultCallback(new ResultCallback<LocationResult>()
                 {
@@ -220,14 +286,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         Location location = locationResult.getLocation();
                         lat = location.getLatitude();
                         lng = location.getLongitude();
-                        Log.d("lat", "value"+lat);
 
                         //Set up initial URL
                         URL = "https://partner-api.groupon.com/deals.json?tsToken=US_AFF_0_201236_212556_0"
                                 + "&lat=" + lat
                                 + "&lng=" + lng
                                 + "&offset=0&limit=200";
-
                         loadRecyclerViewData(URL);
                     }
                 });
@@ -255,10 +319,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private void createFence() {
         checkLocationPermission();
 
+
+        Log.d( "FenceCreating", "FenceCreating is working!");
         AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.STILL);
         AwarenessFence homeFence = LocationFence.in(43.769828, -79.413470, 100000, 1000 );
 
-        AwarenessFence sittingAtHomeFence = AwarenessFence.and(homeFence, activityFence);
+        AwarenessFence sittingAtHomeFence = AwarenessFence.and(activityFence);
 
         Intent intent = new Intent(ACTION_FENCE);
         PendingIntent fencePendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
@@ -283,6 +349,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 if( TextUtils.equals(KEY_SITTING_AT_HOME, fenceState.getFenceKey() ) ) {
                     if( fenceState.getCurrentState() == FenceState.TRUE ) {
                         Log.e("ContextAwareness+", "You've been sitting at home for too long");
+                        fenceCount = 1;
                     }
                 }
             }
@@ -301,7 +368,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         if (mFenceBroadcastReceiver != null) {
             unregisterReceiver(mFenceBroadcastReceiver);
         }
-
         super.onPause();
     }
 
@@ -395,9 +461,42 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         }
     }
 
+    //Refresh deals
+
+    private void refreshDeals(){
+        String url;
+
+        if(fenceCount==1||fenceCount==2) {
+            Log.e("ContextAwareness+", "Fence is working");
+            url=  URL + "&filters=category:" + "automotive";
+            reSetRecyclerViewData(url);
+            clickCount = clickCount - 1;
+            fenceCount=0;
+        }else {
+            if ((clickCount % 4) == 1) {
+                url = URL + "&channel_id=getaways";
+                reSetRecyclerViewData(url);
+                Toast.makeText(getApplicationContext(),"Deals for Getaway are choosing for you!",Toast.LENGTH_LONG).show();
+            } else if ((clickCount % 4) == 2) {
+                url = URL + "&channel_id=goods";
+                reSetRecyclerViewData(url);
+                Toast.makeText(getApplicationContext(),"Deals for Good category are choosing for you!",Toast.LENGTH_LONG).show();
+
+            } else if ((clickCount % 4) == 3) {
+                url = URL + "&channel_id=occasions";
+                reSetRecyclerViewData(url);
+                Toast.makeText(getApplicationContext(),"Deals for occasions are choosing for you!",Toast.LENGTH_LONG).show();
+            } else {
+                url=URL;
+                reSetRecyclerViewData(url);
+                Toast.makeText(getApplicationContext(),"Deals for local are choosing for you!",Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
     //Customize Api
 
-    public void setURLChannel(String channel) {
+    private void setURLChannel(String channel) {
         try {
             channel = URLEncoder.encode(channel, "UTF-8");
         } catch (Exception e) {
@@ -407,7 +506,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         Log.v("uRL", URL);
     }
 
-    public void setURLCategories(String categories) {
+    private void setURLCategories(String categories) {
         try {
             categories = URLEncoder.encode(categories, "UTF-8");
         } catch (Exception e) {
@@ -416,6 +515,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         URL += "&filters=category:" + categories;
         Log.v("uRL", URL);
     }
+
 
 }
 

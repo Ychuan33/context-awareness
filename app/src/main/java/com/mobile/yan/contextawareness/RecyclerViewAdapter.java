@@ -50,7 +50,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         viewHolder.linearLayout.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Intent i = new Intent(context, DetailActivity.class);
                 i.putExtra( "detail_name", listItems.get( viewHolder.getAdapterPosition() ).getHead());
                 i.putExtra( "detail_desc", listItems.get( viewHolder.getAdapterPosition() ).getDesc());
@@ -65,12 +64,10 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 i.putExtra( "detail_initialPrice", listItems.get( viewHolder.getAdapterPosition() ).getInitialPrice());
                 i.putExtra( "detail_discountPrice", listItems.get( viewHolder.getAdapterPosition() ).getDiscountPrice());
                 i.putExtra( "detail_channels", listItems.get(viewHolder.getAdapterPosition()).getChannels() );
-
                 i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity( i );
             }
         } );
-
         return viewHolder;
     }
 
@@ -89,7 +86,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         return listItems.size();
     }
 
-    //Enable search
+    //Filter recyclerView
     public void setAdapterFilter (ArrayList<ListItem> newList){
         listItems = new ArrayList<>();
         listItems.addAll( newList );

@@ -113,7 +113,6 @@ public class DetailActivity extends AppCompatActivity {
 
         callbackManager = CallbackManager.Factory.create();
         shareDialog = new ShareDialog( this );
-
         btn_sharing.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -133,7 +132,6 @@ public class DetailActivity extends AppCompatActivity {
     private void showWeather(String show_weather){
         if (show_weather.contains( "No chaneels is avialable")||show_weather.contains("getaways")){
             setWeatherInfo();
-        } else {
         }
     }
 
