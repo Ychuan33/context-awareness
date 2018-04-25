@@ -321,8 +321,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
 
         Log.d( "FenceCreating", "FenceCreating is working!");
-        AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.STILL);
-        AwarenessFence homeFence = LocationFence.in(43.769828, -79.413470, 100000, 1000 );
+        //AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.RUNNING);
+        AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.WALKING);
+        //AwarenessFence homeFence = LocationFence.in(43.769828, -79.413470, 100000, 1000 );
 
         AwarenessFence sittingAtHomeFence = AwarenessFence.and(activityFence);
 
@@ -468,8 +469,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         if(fenceCount==1||fenceCount==2) {
             Log.e("ContextAwareness+", "Fence is working");
-            url=  URL + "&filters=category:" + "automotive";
+            url=  URL + "&filters=category:" + "health-and-fitness";
             reSetRecyclerViewData(url);
+            Log.e("ContextAwareness+", "Fence is working"+clickCount+"fencecount"+fenceCount);
             clickCount = clickCount - 1;
             fenceCount=0;
         }else {
