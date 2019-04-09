@@ -83,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private double  lat;
     private double  lng;
     private final static String ACTION_FENCE = "action_fence";
-    private final static String KEY_SITTING_AT_HOME = "sitting_at_home";
+    private final static String KEY_Health_AND_FITNESS = "health_and_fitness";
     private MainActivity.FenceBroadcastReceiver mFenceBroadcastReceiver;
 
     private RecyclerView recyclerView;
@@ -126,7 +126,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         recyclerView.setHasFixedSize( true );
         recyclerView.setLayoutManager( new LinearLayoutManager( this ) );
         listItems = new ArrayList<>( );
-
     }
 
     @Override
@@ -257,8 +256,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         requestQueue.add(stringRequest);
     }
 
-
-
     //Handle null value in channels
 
     private String defChannel(JSONObject object) throws JSONException {
@@ -321,11 +318,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
 
         Log.d( "FenceCreating", "FenceCreating is working!");
-        //AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.RUNNING);
-        AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.WALKING);
-        //AwarenessFence homeFence = LocationFence.in(43.769828, -79.413470, 100000, 1000 );
-
-        AwarenessFence sittingAtHomeFence = AwarenessFence.and(activityFence);
+        AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.RUNNING);
+        //AwarenessFence activityFence = DetectedActivityFence.during(DetectedActivityFence.WALKING);
 
         Intent intent = new Intent(ACTION_FENCE);
         PendingIntent fencePendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
@@ -334,11 +328,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         registerReceiver(mFenceBroadcastReceiver, new IntentFilter(ACTION_FENCE));
 
         FenceUpdateRequest.Builder builder = new FenceUpdateRequest.Builder();
-        builder.addFence(KEY_SITTING_AT_HOME, sittingAtHomeFence, fencePendingIntent);
+        builder.addFence(KEY_Health_AND_FITNESS, activityFence, fencePendingIntent);
 
         Awareness.FenceApi.updateFences( mGoogleApiClient, builder.build() );
     }
-
 
     public class FenceBroadcastReceiver extends BroadcastReceiver {
 
@@ -347,9 +340,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             if(TextUtils.equals(ACTION_FENCE, intent.getAction())) {
                 FenceState fenceState = FenceState.extract(intent);
 
-                if( TextUtils.equals(KEY_SITTING_AT_HOME, fenceState.getFenceKey() ) ) {
+                if( TextUtils.equals(KEY_Health_AND_FITNESS, fenceState.getFenceKey() ) ) {
                     if( fenceState.getCurrentState() == FenceState.TRUE ) {
-                        Log.e("ContextAwareness+", "You've been sitting at home for too long");
+                        Log.e("ContextAwareness+", "Health and Fitness is choosing for you!");
                         fenceCount = 1;
                     }
                 }
@@ -363,7 +356,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         Awareness.FenceApi.updateFences(
                 mGoogleApiClient,
                 new FenceUpdateRequest.Builder()
-                        .removeFence(KEY_SITTING_AT_HOME)
+                        .removeFence(KEY_Health_AND_FITNESS)
                         .build());
 
         if (mFenceBroadcastReceiver != null) {
@@ -468,10 +461,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         String url;
 
         if(fenceCount==1||fenceCount==2) {
-            Log.e("ContextAwareness+", "Fence is working");
+            Log.d("ContextAwareness+", "Fence is working");
             url=  URL + "&filters=category:" + "health-and-fitness";
             reSetRecyclerViewData(url);
-            Log.e("ContextAwareness+", "Fence is working"+clickCount+"fencecount"+fenceCount);
             clickCount = clickCount - 1;
             fenceCount=0;
         }else {
